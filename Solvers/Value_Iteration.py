@@ -35,12 +35,12 @@ class ValueIteration(AbstractSolver):
                 self.env.nA:
                     number of actions in the environment
 
-                for probability, next_state, reward, done in self.P[state][action]:
+                for probability, next_state, reward, done in self.env.P[state][action]:
                     `probability` will be probability of `next_state` actually being the next state
                     `reward` is the short-term/immediate reward for achieving that next state
-                    `done` is a boolean of wether or not that next state is the last/terminal state
+                    `done` is a boolean of whether or not that next state is the last/terminal state
 
-                    Every action has a chance (at least theortically) of different outcomes (states)
+                    Every action has a chance (at least theoretically) of different outcomes (states)
                     Which is why `self.P[state][action]` is a list of outcomes and not a single outcome
 
                 self.options.gamma:
@@ -63,13 +63,19 @@ class ValueIteration(AbstractSolver):
 
         # Update the estimated value of each state
         for each_state in range(self.env.nS):
-
             ###################################################
             #            Compute self.V here                  #
             # Do a one-step lookahead to find the best action #
             #           YOUR IMPLEMENTATION HERE              #
             ###################################################
-            raise NotImplementedError
+
+            # compute actions v values and get maximum
+            v_actions = [np.sum([
+                probability * (reward + self.options.gamma * self.V[next_state])
+                for probability, next_state, reward, done in action_info
+            ]) for _, action_info in self.env.P[each_state].items()]
+
+            self.V[each_state] = np.max(v_actions)
 
         # Dont worry about this part
         self.statistics[Statistics.Rewards.value] = np.sum(self.V)
@@ -104,7 +110,13 @@ class ValueIteration(AbstractSolver):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
-            raise NotImplementedError
+
+            v_actions = {action: np.sum([
+                probability * (reward + self.options.gamma * self.V[next_state])
+                for probability, next_state, reward, done in action_info
+            ]) for action, action_info in self.env.P[state].items()}
+
+            return max(v_actions, key=v_actions.get)
 
         return policy_fn
 
