@@ -36,18 +36,28 @@ class PolicyIteration(AbstractSolver):
                 np.eye(self.env.nA)[action]
         """
 
+        # POLICY EVALUATION
         # Evaluate the current policy
         self.policy_eval()
 
+        # POLICY IMPROVEMENT
         # For each state...
         for s in range(self.env.nS):
             # Find the best action by one-step lookahead
-            # Ties are resolved arbitarily
+            # Ties are resolved arbitrarily
 
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
 
+            # compute actions v values and get maximum
+            v_actions = [np.sum([
+                probability * (reward + self.options.gamma * self.V[next_state])
+                for probability, next_state, reward, done in action_info
+            ]) for _, action_info in self.env.P[s].items()]
+            # max_action = np.random.choice(np.flatnonzero(v_actions == np.max(v_actions)))
+            max_action = np.argmax(v_actions)
+            self.policy[s, :] = np.eye(self.env.nA)[max_action, :]
 
         # In DP methods we don't interact with the environment so we will set the reward to be the sum of state values
         # and the number of steps to -1 representing an invalid value
@@ -76,6 +86,15 @@ class PolicyIteration(AbstractSolver):
         #   YOUR IMPLEMENTATION HERE   #
         ################################
 
+        a = np.eye(self.env.nS)
+        b = np.zeros(self.env.nS)
+        for s in range(self.env.nS):
+            # action = np.random.choice(np.flatnonzero(self.policy[s] == np.max(self.policy[s])))
+            action = np.argmax(self.policy[s])
+            for prob, next_state, reward, done in self.env.P[s][action]:
+                a[s, next_state] -= self.options.gamma * prob
+                b[s] += prob * reward
+        self.V = np.linalg.solve(a, b)
 
     def create_greedy_policy(self):
         """
