@@ -133,7 +133,9 @@ class AsynchVI(ValueIteration):
             # Do a one-step lookahead to find the best action
             A = self.one_step_lookahead(s)
             best_action_value = np.max(A)
+            # build priority queue
             self.pq.push(s, -abs(self.V[s]-best_action_value))
+            # build pred mapping
             for a in range(self.env.nA):
                 for prob, next_state, reward, done in self.env.P[s][a]:
                     if prob > 0:
@@ -169,7 +171,15 @@ class AsynchVI(ValueIteration):
         # Do a one-step lookahead to find the best action       #
         # Update the value function. Ref: Sutton book eq. 4.10. #
         #########################################################
-        raise NotImplementedError
+
+        # choose state with maximal value change potential
+        state = self.pq.pop()
+        # find best action and update value function
+        self.V[state] = np.max(self.one_step_lookahead(state))
+        # update priority queue for states leading to `state`
+        for s in self.pred[state]:
+            best_action_value = np.max(self.one_step_lookahead(s))
+            self.pq.update(s, -abs(self.V[s]-best_action_value))
 
         # you can ignore this part
         self.statistics[Statistics.Rewards.value] = np.sum(self.V)
