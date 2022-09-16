@@ -64,6 +64,37 @@ class MonteCarlo(AbstractSolver):
         #   YOUR IMPLEMENTATION HERE   #
         ################################
 
+        # run episode and save
+        appeared = set()    # to know if its the first appearance of a state-action tuple
+        for t in range(self.options.steps):
+            # get action
+            p_action = self.policy(state)
+            action = np.random.choice(len(p_action), p=p_action)
+
+            # do action on env
+            next_state, reward, done, _ = self.step(action)
+            # insert data to episode in front (we are later going to read it from back to front)
+            # true if first appearance
+            episode.insert(0, (state,action,reward, (state,action) not in appeared))
+            appeared.add((state,action))
+
+            state = next_state
+            # check if not done
+            if done:
+                break
+
+        # for each state-action pair add returns and recalculate estimate of Q
+        g = 0
+        for state, action, reward, first_appearance in episode:
+            # update accumulated reward for episode
+            g = reward + self.options.gamma * g
+            if first_appearance:
+                # update Q values
+                self.returns_sum[(state, action)] += g
+                self.returns_count[(state, action)] += 1
+                self.Q[state][action] = self.returns_sum[(state, action)] / self.returns_count[(state, action)]
+                # recompute epsilon greedy policy not needed since its a function that automatically
+                # uses the newest Q values
 
     def __str__(self):
         return "Monte Carlo"
@@ -90,6 +121,15 @@ class MonteCarlo(AbstractSolver):
             #   YOUR IMPLEMENTATION HERE   #
             ################################
 
+            # get optimal action for state
+            opt = np.argmax(self.Q[observation])
+            # build epsilon greedy policy
+            # for optimal action p = epsilon/nA + 1 - epsilon
+            # for non-optimal actions p = epsilon/na
+            p = np.zeros(nA) + (self.options.epsilon / nA)
+            p[opt] += 1 - self.options.epsilon
+
+            return p
 
         return policy_fn
 
@@ -112,6 +152,7 @@ class MonteCarlo(AbstractSolver):
             #   YOUR IMPLEMENTATION HERE   #
             ################################
 
+            return np.argmax(self.Q[state])
 
         return policy_fn
 
@@ -163,6 +204,8 @@ class OffPolicyMC(MonteCarlo):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+
+
 
 
     def create_random_policy(self):
