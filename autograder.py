@@ -302,9 +302,7 @@ class mcis(unittest.TestCase):
             return action
 
         def dummy_target_policy(state):
-            action = np.zeros((4))
-            action[state] = 1
-            return action
+            return state
 
         def dummy_reset():
             return 0

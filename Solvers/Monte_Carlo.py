@@ -65,15 +65,14 @@ class MonteCarlo(AbstractSolver):
         ################################
 
         # run episode and save
-        appeared = set()    # to know if its the first appearance of a state-action tuple
+        appeared = set()    # to know if it's the first appearance of a state-action tuple
         for t in range(self.options.steps):
             # get action
             p_action = self.policy(state)
             action = np.random.choice(len(p_action), p=p_action)
-
             # do action on env
             next_state, reward, done, _ = self.step(action)
-            # insert data to episode in front (we are later going to read it from back to front)
+            # insert data to episode in front (we will first read the last steps)
             # true if first appearance
             episode.insert(0, (state,action,reward, (state,action) not in appeared))
             appeared.add((state,action))
@@ -93,8 +92,7 @@ class MonteCarlo(AbstractSolver):
                 self.returns_sum[(state, action)] += g
                 self.returns_count[(state, action)] += 1
                 self.Q[state][action] = self.returns_sum[(state, action)] / self.returns_count[(state, action)]
-                # recompute epsilon greedy policy not needed since its a function that automatically
-                # uses the newest Q values
+                # recompute epsilon greedy policy not needed (function that automatically uses the newest Q values)
 
     def __str__(self):
         return "Monte Carlo"
@@ -205,8 +203,32 @@ class OffPolicyMC(MonteCarlo):
         #   YOUR IMPLEMENTATION HERE   #
         ################################
 
+        # get episode data
+        for t in range(self.options.steps):
+            # get action
+            p_action = self.behavior_policy(state)
+            action = np.random.choice(len(p_action), p=p_action)
+            # do action
+            next_state, reward, done, _ = self.step(action)
+            # save into episodes (we will first read the last steps)
+            episode.insert(0, (state,action,reward, p_action[action]))
+            state = next_state
+            if done:
+                break
 
-
+        g = 0
+        w = 1
+        for state, action, reward, p_soft in episode:
+            # update accumulated reward
+            g = reward + self.options.gamma * g
+            # update q values
+            self.C[state][action] += w
+            self.Q[state][action] += w / self.C[state][action] * (g - self.Q[state][action])
+            # recompute epsilon greedy policy not needed (function that automatically uses the newest Q values)
+            # update w with p(a*)=1 for greedy, checking if action is optimal, since if not p(a)=0
+            if action != self.target_policy(state):
+                break
+            w /= p_soft  # w = w * pi(a) / soft(a) = w * 1 / soft(a)
 
     def create_random_policy(self):
         """
