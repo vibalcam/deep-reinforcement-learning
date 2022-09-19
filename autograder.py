@@ -78,7 +78,7 @@ class vi(unittest.TestCase):
         episode_rewards = results['stats'].episode_rewards[-1]
         expected_reward = 2.176
         self.assertTrue(expected_reward < episode_rewards,
-                         'got unexpected rewards for gridworld')
+                         'got unexpected rewards for frozen lake')
         self.__class__.points += 1
 
     @classmethod
@@ -302,7 +302,8 @@ class mcis(unittest.TestCase):
             return action
 
         def dummy_target_policy(state):
-            return state
+            action = state
+            return action
 
         def dummy_reset():
             return 0
