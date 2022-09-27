@@ -45,6 +45,28 @@ class Sarsa(AbstractSolver):
         #   YOUR IMPLEMENTATION HERE   #
         ################################
 
+        # get action
+        p_action = self.epsilon_greedy_action(state)
+        action = np.random.choice(len(p_action), p=p_action)
+        # for each step of the episode
+        for t in range(self.options.steps):
+            # take action
+            next_state, reward, done, _ = self.step(action)
+
+            # get next action
+            p_action = self.epsilon_greedy_action(next_state)
+            next_action = np.random.choice(len(p_action), p=p_action)
+
+            # update q values with q-learning
+            self.Q[state][action] += self.options.alpha * (reward + self.options.gamma * self.Q[next_state][next_action] - self.Q[state][action])
+
+            # update state and action
+            state = next_state
+            action = next_action
+            # check if not done
+            if done:
+                break
+
     def __str__(self):
         return "Sarsa"
 
@@ -80,7 +102,17 @@ class Sarsa(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-        return action_probs
+
+        # get greedy action
+        opt = np.argmax(self.Q[state])
+        nA = self.env.action_space.n
+        # build epsilon greedy policy
+        # for optimal action p = epsilon/nA + 1 - epsilon
+        # for non-optimal actions p = epsilon/na
+        p = np.zeros(nA) + (self.options.epsilon / nA)
+        p[opt] += 1 - self.options.epsilon
+
+        return p
 
     def plot(self,stats):
         plotting.plot_episode_stats(stats)

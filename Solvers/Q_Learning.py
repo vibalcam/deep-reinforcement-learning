@@ -51,6 +51,22 @@ class QLearning(AbstractSolver):
         #   YOUR IMPLEMENTATION HERE   #
         ################################
 
+        for t in range(self.options.steps):
+            # get action
+            p_action = self.epsilon_greedy_action(state)
+            action = np.random.choice(len(p_action), p=p_action)
+            # take action
+            next_state, reward, done, _ = self.step(action)
+
+            # update q values with q-learning
+            max_next_q = np.max(self.Q[next_state])
+            self.Q[state][action] += self.options.alpha * (reward + self.options.gamma * max_next_q - self.Q[state][action])
+
+            # update state
+            state = next_state
+            # check if not done
+            if done:
+                break
 
     def __str__(self):
         return "Q-Learning"
@@ -90,7 +106,17 @@ class QLearning(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-        return action_probs
+
+        # get greedy action
+        opt = np.argmax(self.Q[state])
+        nA = self.env.action_space.n
+        # build epsilon greedy policy
+        # for optimal action p = epsilon/nA + 1 - epsilon
+        # for non-optimal actions p = epsilon/na
+        p = np.zeros(nA) + (self.options.epsilon / nA)
+        p[opt] += 1 - self.options.epsilon
+
+        return p
 
 
 class ApproxQLearning(QLearning):
@@ -139,6 +165,7 @@ class ApproxQLearning(QLearning):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
+            pass
 
         return policy_fn
 
@@ -157,6 +184,7 @@ class ApproxQLearning(QLearning):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        action_probs = 0
         return action_probs
 
     def plot(self, stats):
