@@ -147,6 +147,22 @@ class ApproxQLearning(QLearning):
         #   YOUR IMPLEMENTATION HERE   #
         ################################
 
+        for t in range(self.options.steps):
+            # get action
+            p_action = self.epsilon_greedy_action(state)
+            action = np.random.choice(len(p_action), p=p_action)
+            # take action
+            next_state, reward, done, _ = self.step(action)
+
+            # update q values with q-learning
+            max_next_q = np.max(self.estimator.predict(next_state))
+            self.estimator.update(state, action, reward + self.options.gamma * max_next_q)
+
+            # update state
+            state = next_state
+            # check if not done
+            if done:
+                break
 
     def __str__(self):
         return "Approx Q-Learning"
@@ -165,7 +181,10 @@ class ApproxQLearning(QLearning):
             ################################
             #   YOUR IMPLEMENTATION HERE   #
             ################################
-            pass
+
+            # self.estimator.predict(state) returns the predicted q values for all actions given state
+            best_action = np.argmax(self.estimator.predict(state))
+            return best_action
 
         return policy_fn
 
@@ -176,7 +195,7 @@ class ApproxQLearning(QLearning):
 
         Use:
             self.estimator.predict(s): Returns predicted q value for all actions
-                for a given sstate 's'
+                for a given state 's'
 
         Returns:
             Probability of taking actions
@@ -184,8 +203,17 @@ class ApproxQLearning(QLearning):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-        action_probs = 0
-        return action_probs
+
+        # self.estimator.predict(state) returns the predicted q values for all actions given state
+        opt = np.argmax(self.estimator.predict(state))
+        nA = self.env.action_space.n
+        # build epsilon greedy policy
+        # for optimal action p = epsilon/nA + 1 - epsilon
+        # for non-optimal actions p = epsilon/na
+        p = np.zeros(nA) + (self.options.epsilon / nA)
+        p[opt] += 1 - self.options.epsilon
+
+        return p
 
     def plot(self, stats):
         plotting.plot_cost_to_go_mountain_car(self.env, self.estimator)
