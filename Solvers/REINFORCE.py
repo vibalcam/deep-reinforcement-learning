@@ -35,7 +35,8 @@ def pg_loss():
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-        raise NotImplementedError
+
+        return -K.sum(returns * K.log(predicted_output))
 
     return loss
 
@@ -131,6 +132,10 @@ class Reinforce(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        
+        G[-1] = rewards[-1]
+        for k in range(2, len(G)):
+            G[-k] = rewards[-k] + self.options.gamma * G[-k+1]
 
         # One-hot encoding for actions
         actions_one_hot = np.zeros([len(actions), self.env.action_space.n])
@@ -140,7 +145,10 @@ class Reinforce(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-        deltas = [[0]] # Set the right deltas: (returns - baselines) times the one hot vector
+        
+        # deltas = [[0]] # Set the right deltas: (returns - baselines) times the one hot vector
+        returns = G
+        deltas = (G[:, None] - self.actor_baseline.predict(np.array(states))[1]) * actions_one_hot
 
         # Update actor and state estimator
         self.actor_baseline.fit(x=[np.array(states)],
