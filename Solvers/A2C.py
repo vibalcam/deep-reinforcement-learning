@@ -36,7 +36,8 @@ def actor_loss():
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-        raise NotImplementedError
+
+        return -K.sum(advantage * K.log(predicted_output))
 
     return loss
 
@@ -56,7 +57,8 @@ def critic_loss():
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-        raise NotImplementedError
+
+        return -K.sum(advantage * predicted_output)
 
     return loss
 
@@ -134,6 +136,27 @@ class A2C(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+
+            probs = self.actor_critic.predict([[state]])[0][0]
+            action = np.random.choice(len(probs), p=probs)
+
+            next_state, reward, done, _ = self.step(action)
+            states.append(state)
+            actions.append(action)
+            # deltas.append(reward
+            #               - self.options.gamma * self.actor_critic.predict([[state]])[1][0])
+            if done:
+                deltas.append(reward
+                          - self.actor_critic.predict([[state]])[1][0])
+            else:
+                deltas.append(reward
+                          + self.options.gamma * self.actor_critic.predict([[next_state]])[1][0]
+                          - self.actor_critic.predict([[state]])[1][0])
+
+            state = next_state
+
+            if done:
+                break
 
         # One-hot encoding for actions
         actions_one_hot = np.zeros([len(actions), self.env.action_space.n])
