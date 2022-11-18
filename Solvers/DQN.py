@@ -25,6 +25,10 @@ class DQN(AbstractSolver):
         self.model = self._build_model()
         self.target_model = self._build_model()
         self.memory = deque(maxlen=options.replay_memory_size)
+        
+        # copy parameters from Q target estimator at the beginning
+        self.update_target_model()
+        self.total_steps = 0
 
     def _build_model(self):
         layers = self.options.layers
@@ -62,7 +66,20 @@ class DQN(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
-        return 0
+
+        # build epsilon greedy policy
+        # get greedy (optimal) action
+        q_values = self.model.predict([[state]])[0]
+        opt = np.argmax(q_values)
+        nA = len(q_values)
+        # for optimal action p = epsilon/nA + 1 - epsilon
+        # for non-optimal actions p = epsilon/na
+        p = np.zeros(nA) + (self.options.epsilon / nA)
+        p[opt] += 1 - self.options.epsilon
+
+        # choose action to take uniformly
+        action = np.random.choice(len(p), p=p)
+        return action
 
     def replay(self):
         """
@@ -78,13 +95,26 @@ class DQN(AbstractSolver):
             minibatch = random.sample(self.memory, self.options.batch_size)
             states = []
             target_q = []
+            nA = self.env.action_space.n
             for state, action, reward, next_state, done in minibatch:
                 states.append(state)
                 ################################
                 #   YOUR IMPLEMENTATION HERE   #
                 #  Compute the target value    #
                 ################################
-                target_q.append(q)
+
+                # target value is reward if next_state is terminal
+                # othewise q-learning target (reward + max next state q value)
+                tq = self.model.predict([[state]])[0]
+                if done:
+                    tq[action] = reward
+                else:
+                    # Double DQN
+                    max_next_action = np.argmax(self.model.predict([[next_state]])[0])
+                    tq[action] = reward + self.options.gamma * self.target_model.predict([[next_state]])[0][max_next_action]
+                    # max_next_q = np.max(self.target_model.predict([[next_state]])[0])
+                    # tq[action] = reward + self.options.gamma * max_next_q
+                target_q.append(tq)
 
             states = np.array(states)
             target_q = np.array(target_q)
@@ -115,7 +145,29 @@ class DQN(AbstractSolver):
         ################################
         #   YOUR IMPLEMENTATION HERE   #
         ################################
+        
+        # # copy parameters from Q target estimator at the beginning of episode
+        # self.update_target_model()
 
+        for t in range(self.options.steps):
+            # get action to take
+            action = self.epsilon_greedy(state)
+            # take action
+            next_state, reward, done, _ = self.step(action)
+            # store transition
+            self.memorize(state, action, reward, next_state, done)
+            # learn from minibatch from replay buffer
+            self.replay()
+            # every certain number of steps, copy parameters from Q to target estimator
+            self.total_steps += 1
+            # if t % self.options.update_target_estimator_every == 0:
+            if self.total_steps % self.options.update_target_estimator_every == 0:
+                self.update_target_model()
+
+            # update state
+            state = next_state
+            if done:
+                break
 
     def __str__(self):
         return "DQN"
